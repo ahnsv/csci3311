@@ -1,65 +1,8 @@
-import os
-import streamlit as st
-import streamlit_shadcn_ui as ui
-import altair as alt
 import pandas as pd
-import numpy as np
+from data import fetch_college_data, prepare_cost_data, prepare_enrollment_data
+from visuals import cost_bar_chart, demographic_stacked_chart, enrollment_bar_chart
 
-# write a client class for the college scorecard dataset
-import requests
-
-
-class CollegeScorecardClient:
-    def __init__(self, api_key=None):
-        self.base_url = "https://api.data.gov/ed/collegescorecard/v1/"
-        self.api_key = api_key or "your_api_key_here"
-
-    def get_data(self, endpoint, params=None):
-        """
-        Get data from the College Scorecard API
-
-        Args:
-            endpoint (str): API endpoint to query
-            params (dict): Query parameters
-
-        Returns:
-            dict: JSON response from the API
-        """
-        if params is None:
-            params = {}
-
-        params["api_key"] = self.api_key
-
-        response = requests.get(self.base_url + endpoint, params=params)
-        response.raise_for_status()
-        return response.json()
-
-    def get_institutions(self, fields=None, filters=None, page=0, per_page=100):
-        """
-        Get institution-level data
-
-        Args:
-            fields (list): Fields to return
-            filters (dict): Filters to apply
-            page (int): Page number
-            per_page (int): Results per page
-
-        Returns:
-            dict: Institution data
-        """
-        params = {"page": page, "per_page": per_page}
-
-        if fields:
-            params["fields"] = ",".join(fields)
-
-        if filters:
-            for key, value in filters.items():
-                params[key] = value
-
-        return self.get_data("schools", params)
-
-
-client = CollegeScorecardClient(api_key=os.getenv("COLLEGE_SCORECARD_API_KEY"))
+import streamlit as st
 
 st.set_page_config(
     page_title="The College Affordability Crisis",
@@ -138,8 +81,8 @@ st.markdown(
         padding: 6px 8px;
         margin: 2px 0;
         font-size: 0.75em;
-        color: #6b7280;
-        text-decoration: none;
+        color: #6b7280 !important;
+        text-decoration: none !important;
         border-radius: 4px;
         transition: all 0.2s ease;
         cursor: pointer;
@@ -211,69 +154,9 @@ with st.container():
         unsafe_allow_html=True,
     )
 
-# 1. The Sticker Shock: How Much Does College Really Cost?
-st.markdown(
-    """
-    <div class="nyt-center nyt-section" id="section1">
-        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">1. The Sticker Shock: How Much Does College Really Cost?</h2>
-        <div class="nyt-blockquote">
-            "The published price of college is only the beginning. For many families, the real cost is a complex puzzle of aid, scholarships, and hidden fees."
-        </div>
-        <p style="font-size:1.1em;">College costs have risen dramatically over the past few decades, outpacing inflation and wage growth. The sticker price—what colleges advertise—can be shocking, but the net price after aid is often a different story. Still, for many, the numbers are daunting.</p>
-        <ul class="nyt-bullets">
-            <li>Trends in tuition, fees, and total cost of attendance (public vs. private, in-state vs. out-of-state)</li>
-            <li>Net price vs. sticker price</li>
-            <li>Historical comparison (inflation-adjusted growth)</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# --- College Scorecard API Data Fetching and Caching ---
-@st.cache_data(show_spinner=True)
-def fetch_college_data(year, control=None, state=None, per_page=100):
-    fields = [
-        f"{year}.cost.tuition.in_state",
-        f"{year}.cost.tuition.out_of_state",
-        f"{year}.cost.attendance.academic_year",
-        f"{year}.cost.avg_net_price.public",
-        f"{year}.cost.avg_net_price.private",
-        f"{year}.student.size",
-        f"{year}.student.demographics.race_ethnicity.white",
-        f"{year}.student.demographics.race_ethnicity.black",
-        f"{year}.student.demographics.race_ethnicity.hispanic",
-        f"{year}.student.demographics.race_ethnicity.asian",
-        f"{year}.student.demographics.race_ethnicity.aian",
-        f"{year}.student.demographics.race_ethnicity.nhpi",
-        f"{year}.student.demographics.race_ethnicity.two_or_more",
-        f"{year}.student.demographics.race_ethnicity.non_resident_alien",
-        f"{year}.student.demographics.race_ethnicity.unknown",
-        f"{year}.student.demographics.first_generation",
-        "school.name",
-        "school.state",
-        "school.control",
-        "school.region_id",
-        "school.ownership",
-    ]
-    filters = {}
-    if control:
-        filters["school.ownership"] = (
-            control  # 1=Public, 2=Private nonprofit, 3=Private for-profit
-        )
-    if state:
-        filters["school.state"] = state
-    data = client.get_institutions(fields=fields, filters=filters, per_page=per_page)
-    return data["results"]
-
-
 # --- UI Controls ---
-
-# Year selection (2017-2023)
 years = [f"{y}" for y in range(2017, 2023)]
 year = st.selectbox("Select Year", years, index=len(years) - 1)
-
-# Control type selection
 control_map = {
     "All": None,
     "Public": "1",
@@ -281,8 +164,6 @@ control_map = {
     "Private For-Profit": "3",
 }
 control = st.selectbox("Institution Type", list(control_map.keys()))
-
-# State selection (top 10 populous states for demo)
 states = [
     "All",
     "CA",
@@ -299,79 +180,20 @@ states = [
 ]
 state = st.selectbox("State", states)
 
-# Fetch data
+# --- Data Fetching ---
 data = fetch_college_data(
     year, control=control_map[control], state=None if state == "All" else state
 )
 df = pd.DataFrame(data)
 
-# --- Section 1 Visualizations ---
+# --- Section 1: Cost Visualizations ---
+st.markdown(
+    '<div class="nyt-center nyt-section" id="section1">', unsafe_allow_html=True
+)
+st.header("Section 1: College Cost Data Explorer")
 if not df.empty:
-    # Tuition and cost columns
-    tuition_cols = [
-        f"{year}.cost.tuition.in_state",
-        f"{year}.cost.tuition.out_of_state",
-        f"{year}.cost.attendance.academic_year",
-        f"{year}.cost.avg_net_price.public",
-        f"{year}.cost.avg_net_price.private",
-    ]
-    # Prepare data for bar chart
-    cost_data = pd.DataFrame(
-        {
-            "Institution": df["school.name"],
-            "State": df["school.state"],
-            "Type": df["school.ownership"].map(
-                {1: "Public", 2: "Private Nonprofit", 3: "Private For-Profit"}
-            ),
-            "In-State Tuition": pd.to_numeric(
-                df.get(f"{year}.cost.tuition.in_state", 0), errors="coerce"
-            ),
-            "Out-of-State Tuition": pd.to_numeric(
-                df.get(f"{year}.cost.tuition.out_of_state", 0), errors="coerce"
-            ),
-            "Total Cost": pd.to_numeric(
-                df.get(f"{year}.cost.attendance.academic_year", 0), errors="coerce"
-            ),
-            "Net Price (Public)": pd.to_numeric(
-                df.get(f"{year}.cost.avg_net_price.public", 0), errors="coerce"
-            ),
-            "Net Price (Private)": pd.to_numeric(
-                df.get(f"{year}.cost.avg_net_price.private", 0), errors="coerce"
-            ),
-        }
-    )
-    # Melt for Altair
-    cost_melted = cost_data.melt(
-        id_vars=["Institution", "State", "Type"],
-        value_vars=[
-            "In-State Tuition",
-            "Out-of-State Tuition",
-            "Total Cost",
-            "Net Price (Public)",
-            "Net Price (Private)",
-        ],
-        var_name="Cost Type",
-        value_name="Cost",
-    )
-    # Remove NaN/zero
-    cost_melted = cost_melted[cost_melted["Cost"] > 0]
-    # Bar chart: Average cost by type
-    avg_cost = cost_melted.groupby(["Type", "Cost Type"])["Cost"].mean().reset_index()
-    chart = (
-        alt.Chart(avg_cost)
-        .mark_bar()
-        .encode(
-            x=alt.X("Type:N", title="Institution Type"),
-            y=alt.Y("Cost:Q", title="Average Cost ($)"),
-            color="Cost Type:N",
-            tooltip=["Type", "Cost Type", alt.Tooltip("Cost", format=",.0f")],
-        )
-        .properties(
-            title=f"Average College Costs by Type ({year})", width=600, height=400
-        )
-    )
-    st.altair_chart(chart, use_container_width=True)
-    # Table of top 10 most expensive institutions
+    cost_data, cost_melted, avg_cost = prepare_cost_data(df, year)
+    st.altair_chart(cost_bar_chart(avg_cost, year), use_container_width=True)
     st.subheader("Top 10 Most Expensive Institutions (Total Cost)")
     st.dataframe(
         cost_data.sort_values("Total Cost", ascending=False).head(10)[
@@ -380,109 +202,24 @@ if not df.empty:
     )
 else:
     st.info("No data available for the selected filters.")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# 2. Enrollment Patterns: Who's Going to College?
+# --- Section 2: Enrollment Visualizations ---
 st.markdown(
-    """
-    <div class="nyt-center nyt-section" id="section2">
-        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">2. Enrollment Patterns: Who's Going to College?</h2>
-        <div class="nyt-blockquote">
-            "The cost of college is only the beginning. For many families, the real cost is a complex puzzle of aid, scholarships, and hidden fees."
-        </div>
-        <p style="font-size:1.1em;">
-            The cost of college is only the beginning. For many families, the real cost is a complex puzzle of aid, scholarships, and hidden fees.
-        </p>
-        <ul class="nyt-bullets">
-            <li>Trends in enrollment by institution type</li>
-            <li>Demographic breakdown of enrollment</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True,
+    '<div class="nyt-center nyt-section" id="section2">', unsafe_allow_html=True
 )
-
-# --- Section 2: Enrollment Patterns ---
+st.header("Section 2: Enrollment Patterns Explorer")
 if not df.empty:
-    # Enrollment and demographics
-    enroll_data = pd.DataFrame(
-        {
-            "Institution": df["school.name"],
-            "State": df["school.state"],
-            "Type": df["school.ownership"].map(
-                {1: "Public", 2: "Private Nonprofit", 3: "Private For-Profit"}
-            ),
-            "Enrollment": pd.to_numeric(
-                df.get(f"{year}.student.size", 0), errors="coerce"
-            ),
-            "White": pd.to_numeric(
-                df.get(f"{year}.student.demographics.race_ethnicity.white", 0),
-                errors="coerce",
-            ),
-            "Black": pd.to_numeric(
-                df.get(f"{year}.student.demographics.race_ethnicity.black", 0),
-                errors="coerce",
-            ),
-            "Hispanic": pd.to_numeric(
-                df.get(f"{year}.student.demographics.race_ethnicity.hispanic", 0),
-                errors="coerce",
-            ),
-            "Asian": pd.to_numeric(
-                df.get(f"{year}.student.demographics.race_ethnicity.asian", 0),
-                errors="coerce",
-            ),
-            "First Gen": pd.to_numeric(
-                df.get(f"{year}.student.demographics.first_generation", 0),
-                errors="coerce",
-            ),
-        }
+    enroll_data, enroll_by_type, demo_melted = prepare_enrollment_data(df, year)
+    st.altair_chart(
+        enrollment_bar_chart(enroll_by_type, year), use_container_width=True
     )
-    # Remove NaN/zero
-    enroll_data = enroll_data[enroll_data["Enrollment"] > 0]
-    # Enrollment by type
-    enroll_by_type = enroll_data.groupby("Type")["Enrollment"].sum().reset_index()
-    chart2 = (
-        alt.Chart(enroll_by_type)
-        .mark_bar()
-        .encode(
-            x=alt.X("Type:N", title="Institution Type"),
-            y=alt.Y("Enrollment:Q", title="Total Enrollment"),
-            color="Type:N",
-            tooltip=["Type", alt.Tooltip("Enrollment", format=",")],
-        )
-        .properties(
-            title=f"Total Enrollment by Institution Type ({year})",
-            width=500,
-            height=350,
-        )
+    st.altair_chart(
+        demographic_stacked_chart(demo_melted, year), use_container_width=True
     )
-    st.altair_chart(chart2, use_container_width=True)
-    # Demographic breakdown (stacked bar)
-    demo_cols = ["White", "Black", "Hispanic", "Asian", "First Gen"]
-    demo_melted = enroll_data.melt(
-        id_vars=["Institution", "Type"],
-        value_vars=demo_cols,
-        var_name="Demographic",
-        value_name="Count",
-    )
-    demo_melted = demo_melted[demo_melted["Count"] > 0]
-    demo_chart = (
-        alt.Chart(demo_melted)
-        .mark_bar()
-        .encode(
-            x=alt.X("Type:N", title="Institution Type"),
-            y=alt.Y("Count:Q", stack="normalize", title="Proportion"),
-            color="Demographic:N",
-            tooltip=["Type", "Demographic", alt.Tooltip("Count", format=",")],
-        )
-        .properties(
-            title=f"Demographic Breakdown by Institution Type ({year})",
-            width=500,
-            height=350,
-        )
-    )
-    st.altair_chart(demo_chart, use_container_width=True)
 else:
     st.info("No enrollment data available for the selected filters.")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # 3. The Debt Question: How Loans Shape Life After Graduation
 st.markdown(
