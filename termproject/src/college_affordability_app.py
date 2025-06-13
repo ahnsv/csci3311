@@ -158,6 +158,28 @@ with st.container():
     )
 
 # --- UI Controls ---
+
+# --- Section 1: Cost Visualizations ---
+figure_counter = 1
+st.markdown(
+    '''
+    <div class="nyt-center nyt-section" id="section1">
+        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">1. The Sticker Shock: How Much Does College Really Cost?</h2>
+        <div class="nyt-blockquote">
+            "The published price of college is only the beginning. For many families, the real cost is a complex puzzle of aid, scholarships, and hidden fees."
+        </div>
+        <p style="font-size:1.1em;">
+            College costs have risen dramatically over the past few decades, outpacing inflation and wage growth. The sticker price—what colleges advertise—can be shocking, but the net price after aid is often a different story. Still, for many, the numbers are daunting.
+        </p>
+        <ul class="nyt-bullets">
+            <li>Trends in tuition, fees, and total cost of attendance (public vs. private, in-state vs. out-of-state)</li>
+            <li>Net price vs. sticker price</li>
+            <li>Historical comparison (inflation-adjusted growth)</li>
+        </ul>
+    </div>
+    ''',
+    unsafe_allow_html=True,
+)
 years = [f"{y}" for y in range(2017, 2023)]
 year = st.selectbox("Select Year", years, index=len(years) - 1)
 control_map = {
@@ -188,35 +210,14 @@ data = fetch_college_data(
     year, control=control_map[control], state=None if state == "All" else state
 )
 df = pd.DataFrame(data)
-
-# --- Section 1: Cost Visualizations ---
-figure_counter = 1
-st.markdown(
-    '''
-    <div class="nyt-center nyt-section" id="section1">
-        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">1. The Sticker Shock: How Much Does College Really Cost?</h2>
-        <div class="nyt-blockquote">
-            "The published price of college is only the beginning. For many families, the real cost is a complex puzzle of aid, scholarships, and hidden fees."
-        </div>
-        <p style="font-size:1.1em;">
-            College costs have risen dramatically over the past few decades, outpacing inflation and wage growth. The sticker price—what colleges advertise—can be shocking, but the net price after aid is often a different story. Still, for many, the numbers are daunting.
-        </p>
-        <ul class="nyt-bullets">
-            <li>Trends in tuition, fees, and total cost of attendance (public vs. private, in-state vs. out-of-state)</li>
-            <li>Net price vs. sticker price</li>
-            <li>Historical comparison (inflation-adjusted growth)</li>
-        </ul>
-    </div>
-    ''',
-    unsafe_allow_html=True,
-)
-st.header("Section 1: College Cost Data Explorer")
 if not df.empty:
+    st.subheader("Average College Costs by Institution Type")
     cost_data, cost_melted, avg_cost = prepare_cost_data(df, year)
     st.altair_chart(cost_bar_chart(avg_cost, year), use_container_width=True)
     st.caption(f"Figure {figure_counter}: Average college costs by institution type (mock data).")
     figure_counter += 1
     st.subheader("Top 10 Most Expensive Institutions (Total Cost)")
+    st.write(f"Year: {year}, Institution Type: {control}, State: {state}")
     st.dataframe(
         cost_data.sort_values("Total Cost", ascending=False).head(10)[
             ["Institution", "State", "Type", "Total Cost"]
