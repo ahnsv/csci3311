@@ -13,6 +13,7 @@ wheels/
 .ipynb_checkpoints/
 *.png
 *.csv
+!redesign/data/Moseley Data.csv
 .DS_Store
 *.db
 *.json
