@@ -142,9 +142,17 @@ with st.container():
             <h1 style="font-size:2.2em; font-weight:700; margin-bottom:0.2em; font-style: italic;">
                 The College Affordability Crisis: Is Higher Education Still Worth It?
             </h1>
-            <p style="color: #475569; font-size: 1.1em; margin-bottom: 2em;">
-                By <a href="https://www.linkedin.com/in/humphrey-ahn/" style="text-decoration: underline; color: unset;">Sangtae Ahn</a> &mdash; <a href="https://github.com/ahnsv" style="text-decoration: underline; color: unset;">GitHub</a> &mdash; June 13, 2025
-            </p>
+            <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 1.5em;">
+                <img src="https://avatars.githubusercontent.com/u/24207964?v=4" alt="Sangtae Ahn" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border: 2px solid #eee;">
+                <div>
+                    <div style="font-size: 1.1em; font-weight: 700; color: #222;">
+                        By <a href="https://www.linkedin.com/in/humphrey-ahn/" style="color: #222; text-decoration: underline;">Sangtae Ahn</a>
+                    </div>
+                    <div style="font-size: 0.9em; color: #555; margin-top: 0.3em;">
+                        June 13, 2025
+                    </div>
+                </div>
+            </div>
             <p style="font-size:1.2em; line-height:1.7; margin-bottom:1.5em;">
                 <strong>College was once the surest path to the American Dream.</strong> But today, the price tag of a degree has soared, student debt has become a defining feature of young adulthood, and families across the country are asking: <em>Is it still worth it?</em>
             </p>
