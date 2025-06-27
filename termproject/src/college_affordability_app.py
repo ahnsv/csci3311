@@ -127,16 +127,16 @@ st.markdown(
     <div class="floating-toc" id="floating-toc">
         <div class="toc-title">Contents</div>
         <a href="#intro" class="toc-item toc-anchor">Introduction</a>
-        <a href="#section1" class="toc-item toc-anchor">1. Sticker Shock</a>
-        <a href="#section2" class="toc-item toc-anchor">2. Enrollment Patterns</a>
-        <a href="#section3" class="toc-item toc-anchor">3. The Debt Question</a>
-        <a href="#section4" class="toc-item toc-anchor">4. Alternatives Rising</a>
-        <a href="#section5" class="toc-item toc-anchor">5. ROI in 2025</a>
-        <a href="#section6" class="toc-item toc-anchor">6. Equity & Access</a>
-        <a href="#section7" class="toc-item toc-anchor">7. Cultural Shift</a>
-        <a href="#section8" class="toc-item toc-anchor">8. Policy & Future</a>
-        <a href="#section9" class="toc-item toc-anchor">9. Data Deep-Dive</a>
-        <a href="#appendix" class="toc-item toc-anchor">10. Appendix</a>
+        <a href="#1-the-sticker-shock-how-much-does-college-really-cost" class="toc-item toc-anchor">1. Sticker Shock</a>
+        <a href="#2-whos-deciding-not-to-go-changing-enrollment-patterns" class="toc-item toc-anchor">2. Enrollment Patterns</a>
+        <a href="#3-the-debt-question-how-loans-shape-life-after-graduation" class="toc-item toc-anchor">3. The Debt Question</a>
+        <a href="#4-alternatives-on-the-rise-what-people-are-choosing-instead" class="toc-item toc-anchor">4. Alternatives Rising</a>
+        <a href="#5-is-it-still-worth-it-returns-on-investment-in-2025" class="toc-item toc-anchor">5. ROI in 2025</a>
+        <a href="#6-equity-and-access-who-gets-left-behind" class="toc-item toc-anchor">6. Equity & Access</a>
+        <a href="#7-the-cultural-shift-what-does-society-value-now" class="toc-item toc-anchor">7. Cultural Shift</a>
+        <a href="#8-policy-and-the-future-can-anything-change" class="toc-item toc-anchor">8. Policy & Future</a>
+        <a href="#9-data-deep-dive-visualizing-the-college-affordability-crisis" class="toc-item toc-anchor">9. Data Deep-Dive</a>
+        <a href="#10-interactive-data-explorer" class="toc-item toc-anchor">10. Appendix</a>
         <a href="#conclusion" class="toc-item toc-anchor">11. Conclusion</a>
     </div>
     
@@ -671,29 +671,40 @@ st.markdown(
 
 deep_dive_9(figure_counter)
 
-# --- Section 10: Appendix - Data Explorer ---
+# --- Section 10: Appendix Link ---
 st.markdown(
     """
     <div class="nyt-center nyt-section" id="appendix">
-        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">10. Appendix: Interactive College Data Explorer</h2>
+        <h2 style="font-size:1.5em; font-weight:600; margin-bottom:0.5em;">10. Interactive Data Explorer</h2>
         <div class="nyt-blockquote">
-            "Dive deeper into the data with this interactive tool. Filter by year, state, and institution type to explore trends in college costs, debt, and outcomes."
+            "Dive deeper into the data with our interactive tools. Filter by year, state, and institution type to explore trends in college costs, debt, and outcomes."
         </div>
         <p style="font-size:1.1em;">
-            This tool allows you to customize your view of college affordability data. Compare tuition, debt, earnings, and ROI across different institution types and time periods.
+            For readers who want to explore the data in more detail, we've created a separate interactive appendix with powerful data visualization tools.
         </p>
-        <ul class="nyt-bullets">
-            <li>Filter by state, year range, and institution type</li>
-            <li>View time series charts for key metrics</li>
-            <li>Sort and explore detailed institution-level data</li>
-            <li>Download custom datasets for your own analysis</li>
-        </ul>
+        <div style="text-align: center; margin: 2rem 0;">
+            <a href="/appendix" target="_self" style="
+                padding: 0.75rem 1.5rem;
+                background-color: #7c3aed;
+                color: white;
+                text-decoration: none;
+                border-radius: 0.25rem;
+                font-weight: 500;
+                font-size: 1.1rem;
+                display: inline-block;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transition: all 0.2s ease;
+            ">
+                Launch Interactive Data Explorer
+            </a>
+        </div>
+        <p style="font-size:0.9em; text-align: center; color: #666;">
+            The Data Explorer allows you to filter and analyze college data across different years, states, and institution types.
+        </p>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
-appendix_10(figure_counter)
 
 # --- Conclusion ---
 st.markdown(

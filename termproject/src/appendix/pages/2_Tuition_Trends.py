@@ -152,74 +152,6 @@ def create_tuition_trend_chart(data, metric, title, y_axis_title):
     
     return chart
 
-# Function to calculate tuition growth rates
-def calculate_tuition_growth(data, metric):
-    """Calculate year-over-year and total growth rates for tuition.
-    
-    Args:
-        data (pd.DataFrame): Processed tuition data
-        metric (str): Column name of the tuition metric
-        
-    Returns:
-        tuple: (yearly_growth_df, total_growth_df)
-    """
-    # Calculate mean tuition by year and ownership
-    yearly_mean = data.groupby(['year', 'ownership'])[metric].mean().reset_index()
-    
-    # Calculate year-over-year growth rates
-    yearly_growth = []
-    
-    for ownership in yearly_mean['ownership'].unique():
-        ownership_data = yearly_mean[yearly_mean['ownership'] == ownership].sort_values('year')
-        
-        for i in range(1, len(ownership_data)):
-            prev_year = ownership_data.iloc[i-1]['year']
-            curr_year = ownership_data.iloc[i]['year']
-            prev_value = ownership_data.iloc[i-1][metric]
-            curr_value = ownership_data.iloc[i][metric]
-            
-            if pd.notnull(prev_value) and pd.notnull(curr_value) and prev_value > 0:
-                growth_rate = ((curr_value - prev_value) / prev_value) * 100
-                
-                yearly_growth.append({
-                    'ownership': ownership,
-                    'start_year': prev_year,
-                    'end_year': curr_year,
-                    'period': f"{prev_year}-{curr_year}",
-                    'growth_rate': growth_rate
-                })
-    
-    yearly_growth_df = pd.DataFrame(yearly_growth)
-    
-    # Calculate total growth rate from first to last year
-    total_growth = []
-    
-    for ownership in yearly_mean['ownership'].unique():
-        ownership_data = yearly_mean[yearly_mean['ownership'] == ownership].sort_values('year')
-        
-        if len(ownership_data) >= 2:
-            first_year = ownership_data.iloc[0]['year']
-            last_year = ownership_data.iloc[-1]['year']
-            first_value = ownership_data.iloc[0][metric]
-            last_value = ownership_data.iloc[-1][metric]
-            
-            if pd.notnull(first_value) and pd.notnull(last_value) and first_value > 0:
-                total_growth_rate = ((last_value - first_value) / first_value) * 100
-                annual_growth_rate = ((last_value / first_value) ** (1 / (last_year - first_year)) - 1) * 100
-                
-                total_growth.append({
-                    'ownership': ownership,
-                    'start_year': first_year,
-                    'end_year': last_year,
-                    'period': f"{first_year}-{last_year}",
-                    'total_growth_rate': total_growth_rate,
-                    'annual_growth_rate': annual_growth_rate
-                })
-    
-    total_growth_df = pd.DataFrame(total_growth)
-    
-    return yearly_growth_df, total_growth_df
-
 # Main content
 st.subheader("Tuition Data Analysis")
 
@@ -308,57 +240,23 @@ if st.button("Analyze Tuition Trends"):
                 )
                 st.altair_chart(in_state_chart, use_container_width=True)
                 
-                # Calculate growth rates
-                yearly_growth, total_growth = calculate_tuition_growth(df, "tuition_in_state")
+                # Calculate average tuition by institution type for the most recent year
+                recent_year = df['year'].max()
+                recent_data = df[df['year'] == recent_year]
                 
-                if not total_growth.empty:
-                    st.subheader("In-State Tuition Growth Analysis")
+                avg_tuition = recent_data.groupby('ownership')['tuition_in_state'].mean().reset_index()
+                
+                if not avg_tuition.empty:
+                    st.markdown("#### Average In-State Tuition by Institution Type")
                     
-                    # Display total growth rates
-                    st.markdown("#### Total Growth Rate")
-                    
-                    growth_cols = st.columns(len(total_growth))
-                    for i, (_, row) in enumerate(total_growth.iterrows()):
-                        with growth_cols[i]:
+                    tuition_cols = st.columns(len(avg_tuition))
+                    for i, (_, row) in enumerate(avg_tuition.iterrows()):
+                        with tuition_cols[i]:
                             st.metric(
-                                f"{row['ownership']} Institutions",
-                                f"{row['total_growth_rate']:.1f}%",
-                                f"{row['annual_growth_rate']:.1f}% annually"
+                                f"{row['ownership']}",
+                                f"${row['tuition_in_state']:,.0f}",
+                                f"in {recent_year}"
                             )
-                    
-                    # Display yearly growth rates
-                    if not yearly_growth.empty:
-                        st.markdown("#### Year-over-Year Growth Rates")
-                        
-                        # Create a chart for yearly growth rates
-                        yearly_chart = alt.Chart(yearly_growth).mark_bar().encode(
-                            x=alt.X('period:N', title='Period'),
-                            y=alt.Y('growth_rate:Q', title='Growth Rate (%)'),
-                            color=alt.Color('ownership:N', title='Institution Type'),
-                            tooltip=['period', 'ownership', alt.Tooltip('growth_rate', format='.1f')]
-                        ).properties(
-                            title="Year-over-Year Tuition Growth Rates",
-                            width=600,
-                            height=300
-                        )
-                        
-                        st.altair_chart(yearly_chart, use_container_width=True)
-                
-                # Insights
-                st.markdown('<div class="insight-box">', unsafe_allow_html=True)
-                st.markdown("#### Key Insights: In-State Tuition")
-                
-                # Calculate average growth rates by ownership
-                if not yearly_growth.empty:
-                    avg_growth = yearly_growth.groupby('ownership')['growth_rate'].mean().reset_index()
-                    max_growth = yearly_growth.loc[yearly_growth['growth_rate'].idxmax()]
-                    
-                    st.markdown(f"""
-                    - Average annual growth rates: {', '.join([f"{row['ownership']}: {row['growth_rate']:.1f}%" for _, row in avg_growth.iterrows()])}
-                    - Highest growth observed: {max_growth['growth_rate']:.1f}% for {max_growth['ownership']} institutions ({max_growth['period']})
-                    - Private institutions generally show {'higher' if avg_growth[avg_growth['ownership'] == 'Private nonprofit']['growth_rate'].values[0] > avg_growth[avg_growth['ownership'] == 'Public']['growth_rate'].values[0] else 'lower'} growth rates than public institutions
-                    """)
-                st.markdown('</div>', unsafe_allow_html=True)
             
             with tab2:
                 # Out-of-state tuition trend
@@ -370,57 +268,23 @@ if st.button("Analyze Tuition Trends"):
                 )
                 st.altair_chart(out_state_chart, use_container_width=True)
                 
-                # Calculate growth rates
-                yearly_growth, total_growth = calculate_tuition_growth(df, "tuition_out_of_state")
+                # Calculate average tuition by institution type for the most recent year
+                recent_year = df['year'].max()
+                recent_data = df[df['year'] == recent_year]
                 
-                if not total_growth.empty:
-                    st.subheader("Out-of-State Tuition Growth Analysis")
+                avg_tuition = recent_data.groupby('ownership')['tuition_out_of_state'].mean().reset_index()
+                
+                if not avg_tuition.empty:
+                    st.markdown("#### Average Out-of-State Tuition by Institution Type")
                     
-                    # Display total growth rates
-                    st.markdown("#### Total Growth Rate")
-                    
-                    growth_cols = st.columns(len(total_growth))
-                    for i, (_, row) in enumerate(total_growth.iterrows()):
-                        with growth_cols[i]:
+                    tuition_cols = st.columns(len(avg_tuition))
+                    for i, (_, row) in enumerate(avg_tuition.iterrows()):
+                        with tuition_cols[i]:
                             st.metric(
-                                f"{row['ownership']} Institutions",
-                                f"{row['total_growth_rate']:.1f}%",
-                                f"{row['annual_growth_rate']:.1f}% annually"
+                                f"{row['ownership']}",
+                                f"${row['tuition_out_of_state']:,.0f}",
+                                f"in {recent_year}"
                             )
-                    
-                    # Display yearly growth rates
-                    if not yearly_growth.empty:
-                        st.markdown("#### Year-over-Year Growth Rates")
-                        
-                        # Create a chart for yearly growth rates
-                        yearly_chart = alt.Chart(yearly_growth).mark_bar().encode(
-                            x=alt.X('period:N', title='Period'),
-                            y=alt.Y('growth_rate:Q', title='Growth Rate (%)'),
-                            color=alt.Color('ownership:N', title='Institution Type'),
-                            tooltip=['period', 'ownership', alt.Tooltip('growth_rate', format='.1f')]
-                        ).properties(
-                            title="Year-over-Year Tuition Growth Rates",
-                            width=600,
-                            height=300
-                        )
-                        
-                        st.altair_chart(yearly_chart, use_container_width=True)
-                
-                # Insights
-                st.markdown('<div class="insight-box">', unsafe_allow_html=True)
-                st.markdown("#### Key Insights: Out-of-State Tuition")
-                
-                # Calculate average growth rates by ownership
-                if not yearly_growth.empty:
-                    avg_growth = yearly_growth.groupby('ownership')['growth_rate'].mean().reset_index()
-                    max_growth = yearly_growth.loc[yearly_growth['growth_rate'].idxmax()]
-                    
-                    st.markdown(f"""
-                    - Average annual growth rates: {', '.join([f"{row['ownership']}: {row['growth_rate']:.1f}%" for _, row in avg_growth.iterrows()])}
-                    - Highest growth observed: {max_growth['growth_rate']:.1f}% for {max_growth['ownership']} institutions ({max_growth['period']})
-                    - The gap between in-state and out-of-state tuition continues to widen for public institutions
-                    """)
-                st.markdown('</div>', unsafe_allow_html=True)
             
             with tab3:
                 # Net price comparison (public vs private)
@@ -456,53 +320,26 @@ if st.button("Analyze Tuition Trends"):
                     
                     st.altair_chart(net_price_chart, use_container_width=True)
                     
-                    # Calculate net price gap
-                    if not public_data.empty and not private_data.empty:
-                        merged_data = public_data.merge(private_data, on='year', suffixes=('_public', '_private'))
-                        merged_data['price_gap'] = merged_data['price_private'] - merged_data['price_public']
-                        merged_data['gap_percentage'] = (merged_data['price_gap'] / merged_data['price_public']) * 100
-                        
-                        # Display gap analysis
-                        st.subheader("Net Price Gap Analysis")
-                        
-                        # Calculate average gap
-                        avg_gap = merged_data['price_gap'].mean()
-                        avg_gap_pct = merged_data['gap_percentage'].mean()
-                        
-                        # Calculate gap trend
-                        first_gap = merged_data.iloc[0]['price_gap']
-                        last_gap = merged_data.iloc[-1]['price_gap']
-                        gap_change = ((last_gap - first_gap) / first_gap) * 100 if first_gap > 0 else 0
-                        
+                    # Display most recent net prices
+                    recent_year = combined_data['year'].max()
+                    recent_public = combined_data[(combined_data['year'] == recent_year) & 
+                                                (combined_data['price_type'] == 'Public Net Price')]['price'].values[0]
+                    recent_private = combined_data[(combined_data['year'] == recent_year) & 
+                                                 (combined_data['price_type'] == 'Private Net Price')]['price'].values[0]
+                    
+                    price_cols = st.columns(2)
+                    with price_cols[0]:
                         st.metric(
-                            "Average Price Gap (Private vs Public)",
-                            f"${avg_gap:,.0f}",
-                            f"{avg_gap_pct:.1f}% premium"
+                            "Public Institution Net Price",
+                            f"${recent_public:,.0f}",
+                            f"in {recent_year}"
                         )
-                        
-                        # Gap trend chart
-                        gap_chart = alt.Chart(merged_data).mark_bar().encode(
-                            x=alt.X('year:O', title='Year'),
-                            y=alt.Y('price_gap:Q', title='Price Gap ($)'),
-                            tooltip=['year', alt.Tooltip('price_gap', format='$,.0f'), alt.Tooltip('gap_percentage', format='.1f%')]
-                        ).properties(
-                            title="Net Price Gap Between Private and Public Institutions",
-                            width=600,
-                            height=300
+                    with price_cols[1]:
+                        st.metric(
+                            "Private Institution Net Price",
+                            f"${recent_private:,.0f}",
+                            f"in {recent_year}"
                         )
-                        
-                        st.altair_chart(gap_chart, use_container_width=True)
-                        
-                        # Insights
-                        st.markdown('<div class="insight-box">', unsafe_allow_html=True)
-                        st.markdown("#### Key Insights: Net Price")
-                        st.markdown(f"""
-                        - The average net price gap between private and public institutions is **${avg_gap:,.0f}**
-                        - Private institutions cost on average **{avg_gap_pct:.1f}%** more than public institutions after financial aid
-                        - The price gap has {'increased' if gap_change > 0 else 'decreased'} by **{abs(gap_change):.1f}%** from {start_year} to {end_year}
-                        - Despite higher sticker prices, the net price difference is smaller than the difference in published tuition rates
-                        """)
-                        st.markdown('</div>', unsafe_allow_html=True)
             
             # Tuition vs. inflation comparison
             st.subheader("Tuition Growth vs. Inflation")
