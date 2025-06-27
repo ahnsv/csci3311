@@ -124,3 +124,90 @@ def prepare_enrollment_data(df, year):
     )
     demo_melted = demo_melted[demo_melted["Count"] > 0]
     return enroll_data, enroll_by_type, demo_melted
+
+
+def fetch_tuition_by_year(year: int, per_page: int = 100) -> pd.DataFrame:
+    """Fetch out-of-state tuition for all institutions for a single academic year.
+
+    Args:
+        year (int): Academic year (e.g. 2018 for 2018-2019 academic year fields in the API).
+        per_page (int): Number of results per API page (College Scorecard maximum is 100).
+
+    Returns:
+        pd.DataFrame: DataFrame with ``id``, ``school.name``, ``school.state`` and tuition column.
+    """
+    client = CollegeScorecardClient(api_key=os.getenv("COLLEGE_SCORECARD_API_KEY"))
+    tuition_field = f"{year}.cost.tuition.out_of_state"
+    page: int = 0
+    records: list[dict] = []
+
+    while True:
+        response = client.get_institutions(
+            fields=[
+                "id",
+                "school.name",
+                "school.state",
+                tuition_field,
+            ],
+            page=page,
+            per_page=per_page,
+        )
+        page_results = response.get("results", [])
+        if not page_results:
+            break
+        records.extend(page_results)
+
+        # Stop when last page returned fewer than ``per_page`` results to avoid extra API calls
+        if len(page_results) < per_page:
+            break
+        page += 1
+    # Create DataFrame and ensure numeric tuition
+    df = pd.DataFrame.from_records(records)
+    if df.empty:
+        return df
+    df = df.rename(columns={tuition_field: "tuition"})
+    df["tuition"] = pd.to_numeric(df["tuition"], errors="coerce")
+    return df.dropna(subset=["tuition"]).reset_index(drop=True)
+
+
+def find_top_tuition_increase(
+    start_year: int, end_year: int, top_n: int = 10
+) -> pd.DataFrame:
+    """Compute and return the institutions with the largest increase in out-of-state tuition.
+
+    Args:
+        start_year (int): Baseline academic year.
+        end_year (int): Comparison academic year.
+        top_n (int): Number of institutions to return.
+
+    Returns:
+        pd.DataFrame: Top ``top_n`` institutions sorted by tuition increase.
+    """
+    if end_year <= start_year:
+        raise ValueError("`end_year` must be greater than `start_year`.")
+
+    start_df = fetch_tuition_by_year(start_year)
+    end_df = fetch_tuition_by_year(end_year)
+
+    if start_df.empty or end_df.empty:
+        raise RuntimeError("Failed to fetch tuition data for the specified years.")
+
+    merged = start_df.merge(
+        end_df[["id", "tuition"]].rename(columns={"tuition": "end_tuition"}),
+        on="id",
+        how="inner",
+    )
+
+    merged = merged.rename(columns={"tuition": "start_tuition"})
+    merged["increase"] = merged["end_tuition"] - merged["start_tuition"]
+
+    top = (
+        merged.sort_values("increase", ascending=False)
+        .head(top_n)
+        .loc[
+            :,
+            ["school.name", "school.state", "start_tuition", "end_tuition", "increase"],
+        ]
+        .reset_index(drop=True)
+    )
+    return top

@@ -1,5 +1,6 @@
 import os
 import requests
+import tenacity
 
 
 class CollegeScorecardClient:
@@ -27,6 +28,10 @@ class CollegeScorecardClient:
         response.raise_for_status()
         return response.json()
 
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(multiplier=1, min=4, max=15),
+    )
     def get_institutions(self, fields=None, filters=None, page=0, per_page=100):
         """
         Get institution-level data
