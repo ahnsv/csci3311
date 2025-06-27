@@ -14,6 +14,9 @@ wheels/
 *.png
 *.csv
 !redesign/data/Moseley Data.csv
+!termproject/data/historical_tuition.csv
+!termproject/data/cost_comparison.csv
+!termproject/data/cost_breakdown.csv
 .DS_Store
 *.db
 *.json

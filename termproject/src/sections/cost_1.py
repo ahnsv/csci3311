@@ -5,9 +5,9 @@ import streamlit as st
 
 def cost_1(figure_counter: int):
     # Load the prepared data
-    historical_tuition = pd.read_csv('./termproject/src/historical_tuition.csv')
-    cost_comparison = pd.read_csv('./termproject/src/cost_comparison.csv')
-    cost_breakdown = pd.read_csv('./termproject/src/cost_breakdown.csv')
+    historical_tuition = pd.read_csv('./termproject/data/historical_tuition.csv')
+    cost_comparison = pd.read_csv('./termproject/data/cost_comparison.csv')
+    cost_breakdown = pd.read_csv('./termproject/data/cost_breakdown.csv')
 
     # Historical trends chart
     st.altair_chart(
