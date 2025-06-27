@@ -4,13 +4,13 @@ import pandas as pd
 from sections.alternatives_4 import alternatives_4
 from sections.cost_1 import cost_1
 from sections.cultural_7 import cultural_7
-from sections.debt_3 import debt_3
+
+# from sections.debt_3 import debt_3
 from sections.deep_dive_9 import deep_dive_9
 from sections.enrollment_2 import enrollment_2
 from sections.equity_6 import equity_6
 from sections.policy_8 import policy_8
 from sections.roi_5 import roi_5
-from sections.appendix_10 import appendix_10
 
 import streamlit as st
 
